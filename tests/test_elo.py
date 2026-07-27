@@ -94,11 +94,45 @@ def test_team_swap_symmetry():
         assert abs(normal[0]["deltas"][key] - swapped[0]["deltas"][key]) < 1e-9
 
 
-# --- provisional K ---------------------------------------------------------
-def test_provisional_k():
-    assert elo.k_factor(0) == config.K_PROV
-    assert elo.k_factor(config.PROV_GAMES - 1) == config.K_PROV
-    assert elo.k_factor(config.PROV_GAMES) == config.K_BASE
+# --- reliability-weighted K ------------------------------------------------
+def test_reliability_ramps():
+    assert elo.reliability(0) == 0.0
+    assert elo.reliability(config.PROV_GAMES) == 1.0
+    assert 0.0 < elo.reliability(config.PROV_GAMES // 2) < 1.0
+
+
+def test_continuous_k():
+    assert elo.own_k(0.0) == config.K_PROV          # brand new -> fast
+    assert elo.own_k(1.0) == config.K_BASE          # settled -> stable
+    assert config.K_BASE < elo.own_k(0.5) < config.K_PROV
+
+
+def test_fresh_vs_fresh_moves_fast_and_conserves():
+    # Everyone unknown: full provisional K, no attenuation, zero-sum.
+    assert abs(elo.step_size(0.0, 0.0) - config.K_PROV) < 1e-9
+    _, hist = elo.replay([_match("A", "B", "C", "D", 10, 4)])
+    assert abs(sum(hist[0]["deltas"].values())) < 1e-9
+
+
+def test_established_moves_less_than_newcomer():
+    # A/B get a long history (settled); C/D never played (brand new).
+    history = [_match("A", "B", "X", "Y", 10, 5, mid=i) for i in range(1, 13)]
+    states, _ = elo.replay(history)
+    assert states["A"].n_atk >= config.PROV_GAMES   # A is settled at attack
+
+    _, h = elo.replay(history + [_match("A", "B", "C", "D", 10, 6, mid=99)])
+    d = h[-1]["deltas"]
+    settled = abs(d[("A", config.ATTACKER)])
+    newcomer = abs(d[("C", config.ATTACKER)])
+    assert newcomer > settled       # the unknown moves much more
+    assert settled > 0              # ...but the veteran isn't frozen
+
+
+def test_settled_step_is_floored_not_zero():
+    # Settled player vs total unknowns: damped to REL_FLOOR, never zero.
+    s = elo.step_size(1.0, 0.0)
+    assert abs(s - config.K_BASE * config.REL_FLOOR) < 1e-9
+    assert s > 0
 
 
 # --- position independence -------------------------------------------------

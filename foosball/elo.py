@@ -91,9 +91,29 @@ def mov_multiplier(margin: int, winner_rating: float, loser_rating: float) -> fl
     return math.log(margin + 1) * (config.MOV_DAMP / denom)
 
 
-def k_factor(role_games: int) -> float:
-    """Higher K while a rating is provisional, lower once it has settled."""
-    return config.K_PROV if role_games < config.PROV_GAMES else config.K_BASE
+def reliability(role_games: int) -> float:
+    """How well we know a rating: 0 when brand new, ramping to 1 once settled."""
+    if config.PROV_GAMES <= 0:
+        return 1.0
+    return min(1.0, role_games / config.PROV_GAMES)
+
+
+def own_k(own_reliability: float) -> float:
+    """Continuous K: a fresh rating (rel 0) moves at K_PROV, a settled one
+    (rel 1) at K_BASE, smoothly in between."""
+    return config.K_BASE + (config.K_PROV - config.K_BASE) * (1.0 - own_reliability)
+
+
+def step_size(own_reliability: float, opponents_reliability: float) -> float:
+    """How much a player moves this game (opponent-reliability weighted).
+
+    You move a full amount when you're still uncertain OR your opponents are
+    well-known (an informative result); you move little only when you're
+    already settled AND facing unknowns. Floored at REL_FLOOR so a settled
+    player still reacts to a genuine upset, and a newcomer always moves fast.
+    """
+    attenuation = max(1.0 - own_reliability, opponents_reliability, config.REL_FLOOR)
+    return own_k(own_reliability) * attenuation
 
 
 # ---------------------------------------------------------------------------
@@ -153,11 +173,17 @@ def replay(matches):
         err_a = result_a - e_a
         err_b = result_b - e_b
 
-        # Per-player K depends on how many games they've played *in this role*.
-        d_aa = k_factor(s_aa.n_atk) * mult * err_a
-        d_ad = k_factor(s_ad.n_dfn) * mult * err_a
-        d_ba = k_factor(s_ba.n_atk) * mult * err_b
-        d_bd = k_factor(s_bd.n_dfn) * mult * err_b
+        # Reliability of each rating in play (pre-update) and how well-known
+        # each side's opponents are -> opponent-reliability-weighted step size.
+        rel_aa, rel_ad = reliability(s_aa.n_atk), reliability(s_ad.n_dfn)
+        rel_ba, rel_bd = reliability(s_ba.n_atk), reliability(s_bd.n_dfn)
+        opp_rel_a = (rel_ba + rel_bd) / 2.0   # team A's opponents are team B
+        opp_rel_b = (rel_aa + rel_ad) / 2.0
+
+        d_aa = step_size(rel_aa, opp_rel_a) * mult * err_a
+        d_ad = step_size(rel_ad, opp_rel_a) * mult * err_a
+        d_ba = step_size(rel_ba, opp_rel_b) * mult * err_b
+        d_bd = step_size(rel_bd, opp_rel_b) * mult * err_b
 
         record = {
             "match_id": m.get("id"),
