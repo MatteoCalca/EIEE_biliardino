@@ -100,6 +100,12 @@ def _streaks(results):
     return (run if last else -run), longest
 
 
+def is_versatile(state) -> bool:
+    """A 'good all-rounder': settled in BOTH roles and above baseline in both."""
+    return (state.n_atk >= config.PROV_GAMES and state.n_dfn >= config.PROV_GAMES
+            and state.atk >= config.START_RATING and state.dfn >= config.START_RATING)
+
+
 # ---------------------------------------------------------------------------
 # Leaderboard
 # ---------------------------------------------------------------------------
@@ -123,6 +129,7 @@ def leaderboard(players, states, agg) -> list:
             "prov_overall": st.is_provisional(),
             "prov_atk": st.is_provisional(config.ATTACKER),
             "prov_dfn": st.is_provisional(config.DEFENDER),
+            "versatile": is_versatile(st),
         })
     rows.sort(key=lambda r: r["overall"], reverse=True)
     for i, r in enumerate(rows, 1):
@@ -188,6 +195,7 @@ def player_report(pid, players, states, agg, history_traj) -> dict:
         "prov_overall": st.is_provisional(),
         "prov_atk": st.is_provisional(config.ATTACKER),
         "prov_dfn": st.is_provisional(config.DEFENDER),
+        "versatile": is_versatile(st),
         "games": games, "wins": a.get("wins", 0), "losses": a.get("losses", 0),
         "win_pct": round(_win_pct(a.get("wins", 0), games), 1),
         "n_atk": a.get("n_atk", 0), "n_dfn": a.get("n_dfn", 0),

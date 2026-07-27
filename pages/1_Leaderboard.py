@@ -27,14 +27,15 @@ medals = ["🥇", "🥈", "🥉"]
 cols = st.columns(min(3, len(ranked)))
 for i, col in enumerate(cols):
     r = ranked[i]
-    col.metric(f"{medals[i]} {r['name']}{service.prov_badge(r[prov_key])}",
+    vb = " 🎭" if r["versatile"] else ""
+    col.metric(f"{medals[i]} {r['name']}{service.prov_badge(r[prov_key])}{vb}",
                f"{r[rating_key]:.0f}", f"{r['win_pct']:.0f}% wins")
 
 st.divider()
 
 df = pd.DataFrame([{
     "#": i + 1,
-    "Player": r["name"] + service.prov_badge(r[prov_key]),
+    "Player": r["name"] + service.prov_badge(r[prov_key]) + (" 🎭" if r["versatile"] else ""),
     "Rating": r[rating_key],
     "Games": r["games"],
     "W–L": f"{r['wins']}–{r['losses']}",
@@ -49,6 +50,7 @@ st.dataframe(
             format="%.0f%%", min_value=0, max_value=100),
     },
 )
-st.caption("⏳ = provisional (fewer than 10 games in that role). "
+st.caption("⏳ = provisional (fewer than 10 games in that role).  "
+           "🎭 = all-rounder (settled and above 1500 in *both* roles).  "
            "Attack / Defense are separate ratings; Overall blends them by "
            "how often you play each position.")

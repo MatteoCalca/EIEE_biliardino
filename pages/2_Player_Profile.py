@@ -30,6 +30,9 @@ c1.metric("Overall" + service.prov_badge(rep["prov_overall"]), f"{rep['overall']
 c2.metric("⚔️ Attack" + service.prov_badge(rep["prov_atk"]), f"{rep['attack']:.0f}")
 c3.metric("🛡️ Defense" + service.prov_badge(rep["prov_dfn"]), f"{rep['defense']:.0f}")
 
+if rep["versatile"]:
+    st.markdown(":violet[🎭 **All-rounder**] — settled and above 1500 in both attack and defense.")
+
 # --- record -----------------------------------------------------------------
 c1, c2, c3 = st.columns(3)
 c1.metric("Games", rep["games"])
