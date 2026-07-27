@@ -1,0 +1,12 @@
+# Streamlit theme + runtime config. Kept intentionally light so the app looks
+# clean on a phone. Users can still flip to dark mode from the app menu.
+[theme]
+primaryColor = "#00a86b"          # foosball-turf green (buttons, accents)
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+# Friendly on flaky office wifi; harmless on Streamlit Cloud.
+enableCORS = true
