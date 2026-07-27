@@ -17,7 +17,7 @@ from functools import lru_cache
 
 from sqlalchemy import (
     Boolean, Column, DateTime, ForeignKey, Integer, MetaData, String, Table,
-    create_engine, func, insert, select, update,
+    cast, create_engine, func, insert, select, update,
 )
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -162,7 +162,8 @@ def data_signature(engine) -> tuple:
     with engine.connect() as conn:
         m = conn.execute(select(
             func.count(matches.c.id),
-            func.coalesce(func.sum(matches.c.voided), 0),
+            # Postgres won't SUM a boolean; cast to int (harmless on SQLite).
+            func.coalesce(func.sum(cast(matches.c.voided, Integer)), 0),
             func.coalesce(func.max(matches.c.id), 0),
         )).first()
         p = conn.execute(select(func.count(players.c.id))).first()
