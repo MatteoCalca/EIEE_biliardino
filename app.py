@@ -5,16 +5,13 @@ tap positions, enter the score, submit. Everything else lives in the pages/
 folder (auto-listed in the sidebar).
 """
 
-import pandas as pd
 import streamlit as st
 
-from foosball import db, service, stats
-from foosball.config import ATTACKER, DEFENDER
+from foosball import config, db, service, stats
 
 service.page_config("Record a match")
 
-st.title("⚽ Foosball Ladder")
-st.caption("Record a 2v2 result — ratings update automatically.")
+st.caption("⚽ Record a 2v2 result — ratings update automatically.")
 
 bundle = service.load()
 players = bundle["players"]
@@ -86,15 +83,10 @@ if submitted:
         st.success(f"Saved! **{winner}** won {int(score_a)}–{int(score_b)}.")
         st.balloons()
         if rec:
-            pos_label = {ATTACKER: "attack", DEFENDER: "defense"}
-            rows = [{
-                "Player": names.get(pid, "?"),
-                "Rating": pos_label[pos],
-                "Change": f"{d:+.1f}",
-                "New": f"{rec['post'][(pid, pos)]:.0f}",
-            } for (pid, pos), d in rec["deltas"].items()]
-            st.markdown("**Rating changes**")
-            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+            st.markdown(service.rating_changes_md(rec, names))
+            st.caption(f"Change = {config.K_BASE:.0f} × speed × margin × "
+                       "(result − win chance). Teammates differ only by speed. "
+                       "Full explanation on the **Methodology** page.")
 
 # --- footer quick stats -----------------------------------------------------
 st.divider()
@@ -102,4 +94,4 @@ c1, c2 = st.columns(2)
 c1.metric("Players", len(players))
 c2.metric("Matches recorded", len(bundle["matches"]))
 st.caption("⏳ = provisional rating (still settling). See the sidebar for the "
-           "leaderboard, profiles, team balancer and stats.")
+           "leaderboard, profiles, team balancer, stats and how ratings work.")

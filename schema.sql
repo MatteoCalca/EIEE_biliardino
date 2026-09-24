@@ -29,3 +29,8 @@ CREATE TABLE IF NOT EXISTS matches (
 
 -- Replay reads matches in this order.
 CREATE INDEX IF NOT EXISTS idx_matches_played_at ON matches (played_at, id);
+
+-- Supabase exposes public tables over its REST API; RLS with no policies
+-- blocks that. The app connects as the table owner, which bypasses RLS.
+ALTER TABLE players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matches ENABLE ROW LEVEL SECURITY;

@@ -4,6 +4,8 @@ A tiny, phone-friendly web app for recording 2v2 foosball (biliardino) results a
 
 Built with **Python + Streamlit**, stored in **Supabase (Postgres)**, hosted free on **Streamlit Community Cloud**.
 
+**Live app:** https://eieebiliardino.streamlit.app/
+
 ## What it does
 
 - **Record a match** from your phone in seconds: pick 4 players, tap positions, enter the score, save. No login required.
@@ -13,6 +15,7 @@ Built with **Python + Streamlit**, stored in **Supabase (Postgres)**, hosted fre
 - **Team balancer**: pick 4 people, get the fairest split and who should play front/back.
 - **Match history** with one-tap undo (ratings recompute automatically).
 - **Stats & fun**: biggest upsets, blowouts, longest games, giant-killers, activity, head-to-head matrix.
+- **Methodology** page: how the rating works, in plain words and in formulas, with a worked example. After every saved match the app also explains, in one line per player, why each rating moved by that amount.
 
 ## How the rating works
 
@@ -22,7 +25,7 @@ Winning matters, but **winning big matters more**: the rating change is scaled b
 
 **Overtime is handled for free.** Because you always win overtime by exactly 2, an 18–16 nail-biter counts as the *gentlest* possible win (margin 2), just like an 11–9 — you simply record the two final scores and the maths does the rest. No special cases.
 
-New players carry a higher K-factor (faster movement) for their first 10 games in a role, shown with a ⏳ badge, then settle to a stable K. All constants live in `foosball/config.py`.
+New ratings move faster: the K-factor ramps linearly from 48 (brand new) to 24 (settled) over the first 10 games in a role, shown with a ⏳ badge. A settled player facing still-unknown opponents is damped (down to 25% of normal speed), since a newcomer's 1500 is only a placeholder; the newcomer still moves at full speed. All constants live in `foosball/config.py`; the in-app **Methodology** page explains everything with live numbers.
 
 Ratings are **never stored** — the match log is the single source of truth, and every rating is recomputed by replaying the log in order. That makes undo/edit trivially correct.
 
@@ -57,7 +60,7 @@ Deploy, then share the URL with your colleagues. Every `git push` auto-redeploys
 
 ```
 app.py                     Record-a-match home page
-pages/                     Leaderboard, Player Profile, Balance Teams, History, Stats
+pages/                     Leaderboard, Player Profile, Balance Teams, History, Stats, Methodology
 foosball/config.py         Tunable constants (start rating, K-factors, MoV)
 foosball/elo.py            Pure rating engine (replay) — no dependencies
 foosball/db.py             Storage (Supabase Postgres / SQLite fallback)

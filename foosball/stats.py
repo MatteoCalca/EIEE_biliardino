@@ -214,6 +214,58 @@ def player_report(pid, players, states, agg, history_traj) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Explaining one match's rating changes (shown right after a submission)
+# ---------------------------------------------------------------------------
+# Reference "typical game" for the headline: evenly matched teams, 10-7.
+TYPICAL_SWING = 0.5 * elo.mov_multiplier(3, 0.0, 0.0)
+
+
+def explain_changes(rec) -> tuple:
+    """Plain-language reasons for one replay record's rating changes.
+
+    Every change is ``step * mov_multiplier * (result - expected)``. The last
+    two factors are shared by the whole team, so they go in one ``headline``;
+    only the step ("speed") differs per player, so each ``reasons[(pid, pos)]``
+    explains that.
+    """
+    a_won = rec["result_a"] >= 0.5
+    team = "A" if a_won else "B"
+    p = rec["expected_a"] if a_won else 1.0 - rec["expected_a"]
+    mult = rec["mov_multiplier"]
+
+    if p < 0.40:
+        label = "underdogs"
+    elif p > 0.60:
+        label = "favourites"
+    else:
+        label = "evenly matched"
+    ratio = (1.0 - p) * mult / TYPICAL_SWING
+    if ratio > 1.3:
+        size = "ratings moved more than in a typical game"
+    elif ratio < 0.7:
+        size = "ratings moved less than in a typical game"
+    else:
+        size = "ratings moved about as much as in a typical game"
+    headline = (f"Team {team} were {label} ({p:.0%} to win) and won by "
+                f"{rec['margin']} (margin ×{mult:.1f}), so {size}.")
+
+    reasons = {}
+    for (pid, pos), step in rec["step"].items():
+        n = rec["role_games"][(pid, pos)]
+        role = "attack" if pos == config.ATTACKER else "defense"
+        if n == 0:
+            txt = f"⏳ first {role} game"
+        elif n < config.PROV_GAMES:
+            txt = f"⏳ {n}/{config.PROV_GAMES} {role} games, still settling"
+        else:
+            txt = f"settled {role} rating"
+        if step < 0.9 * elo.own_k(elo.reliability(n)):
+            txt += ", opponents not yet settled → damped"
+        reasons[(pid, pos)] = f"{txt} · speed ×{step / config.K_BASE:.1f}"
+    return headline, reasons
+
+
+# ---------------------------------------------------------------------------
 # Global / fun stats
 # ---------------------------------------------------------------------------
 def _describe_match(m, names):

@@ -135,6 +135,23 @@ def test_settled_step_is_floored_not_zero():
     assert s > 0
 
 
+def test_record_exposes_speed():
+    # delta == step * margin multiplier * (result - expected), exactly: the
+    # post-submit explanation relies on this decomposition.
+    log = [_match("A", "B", "C", "D", 10, 4, mid=i) for i in range(1, 13)]
+    log += [_match("A", "E", "C", "B", 7, 10, mid=20),
+            _match("E", "C", "F", "A", 10, 8, mid=21)]
+    _, hist = elo.replay(log)
+    seen = {}
+    for rec in hist:
+        err_a = rec["result_a"] - rec["expected_a"]
+        for i, (key, d) in enumerate(rec["deltas"].items()):
+            err = err_a if i < 2 else -err_a
+            assert abs(d - rec["step"][key] * rec["mov_multiplier"] * err) < 1e-9
+            assert rec["role_games"][key] == seen.get(key, 0)
+            seen[key] = seen.get(key, 0) + 1
+
+
 # --- position independence -------------------------------------------------
 def test_positions_are_tracked_separately():
     # A only ever attacks; their defence rating must stay untouched.

@@ -17,7 +17,7 @@ from functools import lru_cache
 
 from sqlalchemy import (
     Boolean, Column, DateTime, ForeignKey, Integer, MetaData, String, Table,
-    cast, create_engine, func, insert, select, update,
+    cast, create_engine, func, insert, select, text, update,
 )
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -72,6 +72,13 @@ def get_engine():
     else:
         engine = create_engine(url, future=True, pool_pre_ping=True)
     metadata.create_all(engine)
+    if engine.dialect.name == "postgresql":
+        # Supabase serves public tables over its REST API to anyone holding the
+        # anon key. RLS with no policies shuts that out; the app connects as the
+        # table owner, which bypasses RLS. Idempotent, so safe on every start.
+        with engine.begin() as conn:
+            for table in metadata.sorted_tables:
+                conn.execute(text(f"ALTER TABLE {table.name} ENABLE ROW LEVEL SECURITY"))
     return engine
 
 

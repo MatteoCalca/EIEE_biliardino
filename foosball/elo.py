@@ -129,8 +129,9 @@ def replay(matches):
 
     ``states``  : dict ``player_id -> PlayerState`` with final ratings.
     ``history`` : list of per-match records (pre/post ratings, deltas,
-                  expected score, MoV multiplier) — used for charts and for
-                  showing "what just changed" after a submission.
+                  expected score, MoV multiplier, per-player speed) — used for
+                  charts and for explaining "what just changed" after a
+                  submission.
     """
     states: dict = {}
 
@@ -180,10 +181,13 @@ def replay(matches):
         opp_rel_a = (rel_ba + rel_bd) / 2.0   # team A's opponents are team B
         opp_rel_b = (rel_aa + rel_ad) / 2.0
 
-        d_aa = step_size(rel_aa, opp_rel_a) * mult * err_a
-        d_ad = step_size(rel_ad, opp_rel_a) * mult * err_a
-        d_ba = step_size(rel_ba, opp_rel_b) * mult * err_b
-        d_bd = step_size(rel_bd, opp_rel_b) * mult * err_b
+        k_aa, k_ad = step_size(rel_aa, opp_rel_a), step_size(rel_ad, opp_rel_a)
+        k_ba, k_bd = step_size(rel_ba, opp_rel_b), step_size(rel_bd, opp_rel_b)
+
+        d_aa = k_aa * mult * err_a
+        d_ad = k_ad * mult * err_a
+        d_ba = k_ba * mult * err_b
+        d_bd = k_bd * mult * err_b
 
         record = {
             "match_id": m.get("id"),
@@ -205,6 +209,20 @@ def replay(matches):
                 (ad, config.DEFENDER): d_ad,
                 (ba, config.ATTACKER): d_ba,
                 (bd, config.DEFENDER): d_bd,
+            },
+            # Why each delta has its size: games already played in that role
+            # and the effective K ("speed") -> delta = step * mult * error.
+            "role_games": {
+                (aa, config.ATTACKER): s_aa.n_atk,
+                (ad, config.DEFENDER): s_ad.n_dfn,
+                (ba, config.ATTACKER): s_ba.n_atk,
+                (bd, config.DEFENDER): s_bd.n_dfn,
+            },
+            "step": {
+                (aa, config.ATTACKER): k_aa,
+                (ad, config.DEFENDER): k_ad,
+                (ba, config.ATTACKER): k_ba,
+                (bd, config.DEFENDER): k_bd,
             },
         }
 

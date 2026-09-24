@@ -10,7 +10,7 @@ import os
 
 import streamlit as st
 
-from . import db, elo, stats
+from . import config, db, elo, stats
 
 APP_TITLE = "⚽ Foosball Ladder"
 
@@ -74,6 +74,21 @@ def page_config(subtitle: str, icon: str = "⚽") -> None:
 
 def prov_badge(is_prov: bool) -> str:
     return " ⏳" if is_prov else ""
+
+
+def rating_changes_md(rec, names) -> str:
+    """Markdown for one match's rating changes: a headline with the shared
+    factors, then one line per player (a sentence column in a dataframe would
+    be cut off on a phone)."""
+    headline, reasons = stats.explain_changes(rec)
+    pos_icon = {config.ATTACKER: "⚔️", config.DEFENDER: "🛡️"}
+    lines = [f"**Rating changes** — {headline}", ""]
+    for i, ((pid, pos), d) in enumerate(rec["deltas"].items()):
+        team = "🔵" if i < 2 else "🔴"   # replay order: Team A first, then B
+        lines.append(f"- {team} **{names.get(pid, '?')}** {pos_icon[pos]} "
+                     f"**{d:+.1f}** → {rec['post'][(pid, pos)]:.0f} — "
+                     f"{reasons[(pid, pos)]}")
+    return "\n".join(lines)
 
 
 def player_options(players, active_only: bool = True):
