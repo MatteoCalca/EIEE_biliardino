@@ -116,6 +116,13 @@ def leaderboard(players, states, agg) -> list:
         st = states.get(pid) or elo.PlayerState()
         a = agg.get(pid, {})
         games = a.get("games", 0)
+        # Per-role record, so the Attack / Defense views count only those games.
+        role = {}
+        for sfx in ("atk", "dfn"):
+            n, w = a.get(f"n_{sfx}", 0), a.get(f"wins_{sfx}", 0)
+            role.update({f"games_{sfx}": n, f"wins_{sfx}": w,
+                         f"losses_{sfx}": n - w,
+                         f"win_pct_{sfx}": round(_win_pct(w, n), 1)})
         rows.append({
             "id": pid, "name": p["name"],
             "overall": round(st.overall, 1),
@@ -125,6 +132,7 @@ def leaderboard(players, states, agg) -> list:
             "wins": a.get("wins", 0),
             "losses": a.get("losses", 0),
             "win_pct": round(_win_pct(a.get("wins", 0), games), 1),
+            **role,
             "n_atk": st.n_atk, "n_dfn": st.n_dfn,
             "prov_overall": st.is_provisional(),
             "prov_atk": st.is_provisional(config.ATTACKER),

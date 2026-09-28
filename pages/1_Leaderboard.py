@@ -19,6 +19,8 @@ view = st.radio("Rank by", ["Overall", "Attack", "Defense"],
                 horizontal=True, index=0)
 rating_key = {"Overall": "overall", "Attack": "attack", "Defense": "defense"}[view]
 prov_key = {"Overall": "prov_overall", "Attack": "prov_atk", "Defense": "prov_dfn"}[view]
+# Games / W–L / Win % count only the games played in the selected role.
+sfx = {"Overall": "", "Attack": "_atk", "Defense": "_dfn"}[view]
 
 ranked = sorted(rows, key=lambda r: r[rating_key], reverse=True)
 
@@ -29,7 +31,7 @@ for i, col in enumerate(cols):
     r = ranked[i]
     vb = " 🎭" if r["versatile"] else ""
     col.metric(f"{medals[i]} {r['name']}{service.prov_badge(r[prov_key])}{vb}",
-               f"{r[rating_key]:.0f}", f"{r['win_pct']:.0f}% wins")
+               f"{r[rating_key]:.0f}", f"{r['win_pct' + sfx]:.0f}% wins")
 
 st.divider()
 
@@ -37,9 +39,9 @@ df = pd.DataFrame([{
     "#": i + 1,
     "Player": r["name"] + service.prov_badge(r[prov_key]) + (" 🎭" if r["versatile"] else ""),
     "Rating": r[rating_key],
-    "Games": r["games"],
-    "W–L": f"{r['wins']}–{r['losses']}",
-    "Win %": r["win_pct"],
+    "Games": r["games" + sfx],
+    "W–L": f"{r['wins' + sfx]}–{r['losses' + sfx]}",
+    "Win %": r["win_pct" + sfx],
 } for i, r in enumerate(ranked)])
 
 st.dataframe(
@@ -53,4 +55,5 @@ st.dataframe(
 st.caption("⏳ = provisional (fewer than 10 games in that role).  "
            "🎭 = all-rounder (settled and above 1500 in *both* roles).  "
            "Attack / Defense are separate ratings; Overall blends them by "
-           "how often you play each position.")
+           "how often you play each position. In the Attack / Defense views, "
+           "games and win % count only the matches played in that role.")
