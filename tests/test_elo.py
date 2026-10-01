@@ -32,6 +32,22 @@ def test_expected_score_symmetry():
     assert e > 0.5  # higher-rated side favoured
 
 
+def test_win_probability_uses_position_ratings():
+    # Unknown players are fresh -> coin flip.
+    assert abs(elo.win_probability({}, "A", "B", "C", "D") - 0.5) < 1e-9
+    states, hist = elo.replay([_match("A", "B", "C", "D", 10, 4)])
+    p = elo.win_probability(states, "A", "B", "C", "D")
+    # Same lineup as the replayed match -> next game's expected score.
+    r_a = elo.team_rating(*(hist[0]["post"][k] for k in
+                            (("A", config.ATTACKER), ("B", config.DEFENDER))))
+    r_b = elo.team_rating(*(hist[0]["post"][k] for k in
+                            (("C", config.ATTACKER), ("D", config.DEFENDER))))
+    assert abs(p - elo.expected_score(r_a, r_b)) < 1e-12
+    assert p > 0.5  # winners favoured in the rematch
+    # A's defense and B's attack were never played -> swapping roles is 50/50.
+    assert abs(elo.win_probability(states, "B", "A", "D", "C") - 0.5) < 1e-9
+
+
 # --- zero-sum --------------------------------------------------------------
 def test_zero_sum_for_fresh_players():
     # All four players are brand new -> identical K -> ratings are conserved.

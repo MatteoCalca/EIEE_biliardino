@@ -79,6 +79,17 @@ def team_rating(attacker_atk: float, defender_dfn: float) -> float:
     return (attacker_atk + defender_dfn) / 2.0
 
 
+def win_probability(states, aa, ad, ba, bd) -> float:
+    """Team A's chance to beat team B from everyone's current position ratings
+    (a player missing from ``states`` counts as brand new)."""
+    def r(pid, position):
+        return (states.get(pid) or PlayerState()).rating(position)
+
+    r_a = team_rating(r(aa, config.ATTACKER), r(ad, config.DEFENDER))
+    r_b = team_rating(r(ba, config.ATTACKER), r(bd, config.DEFENDER))
+    return expected_score(r_a, r_b)
+
+
 def mov_multiplier(margin: int, winner_rating: float, loser_rating: float) -> float:
     """Margin-of-victory multiplier (FiveThirtyeight-style).
 

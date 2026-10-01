@@ -1,5 +1,6 @@
 """Player Profile — one player's ratings, form, splits and history chart."""
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -54,14 +55,35 @@ c1.metric(f"⚔️ As attacker ({rep['n_atk']} games)", f"{rep['win_pct_atk']:.0
 c2.metric(f"🛡️ As defender ({rep['n_dfn']} games)", f"{rep['win_pct_dfn']:.0f}% wins")
 
 # --- ELO history chart ------------------------------------------------------
-traj = rep["trajectory"]
-if len(traj) >= 2:
-    st.subheader("Rating over time")
-    hist = pd.DataFrame(traj)
-    hist["game"] = range(1, len(hist) + 1)
-    chart = hist.set_index("game")[["overall", "atk", "dfn"]].rename(
-        columns={"overall": "Overall", "atk": "Attack", "dfn": "Defense"})
-    st.line_chart(chart, height=280)
+# A static figure (no zoom/pan/tooltips, which fight page scrolling on a
+# phone): one point per day = the rating after that day's last match.
+SERIES = {"overall": "Overall", "atk": "Attack", "dfn": "Defense"}
+hist = pd.DataFrame(rep["trajectory"])
+hist["day"] = pd.to_datetime(hist["played_at"]).dt.normalize()
+daily = hist.groupby("day", as_index=False)[list(SERIES)].last()
+
+st.subheader("Rating over time")
+if len(daily) >= 2:
+    first, last = daily["day"].min(), daily["day"].max()
+    step = max(1, -(-(last - first).days // 5))   # at most 6 date labels
+    ticks = [alt.DateTime(year=d.year, month=d.month, date=d.day)
+             for d in pd.date_range(first, last, freq=f"{step}D")]
+    fmt = "%-d %b" if first.year == last.year else "%-d %b %y"
+
+    long = daily.melt("day", var_name="rating", value_name="value")
+    long["rating"] = long["rating"].map(SERIES)
+    chart = alt.Chart(long).mark_line(point=True).encode(
+        x=alt.X("day:T", title=None,
+                axis=alt.Axis(values=ticks, format=fmt, labelAngle=0,
+                              labelOverlap="greedy")),
+        y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
+        color=alt.Color("rating:N", title=None,
+                        scale=alt.Scale(domain=list(SERIES.values())),
+                        legend=alt.Legend(orient="top")),
+    ).properties(height=280)
+    st.altair_chart(chart, use_container_width=True)
+else:
+    st.caption("The chart appears once there are matches on two different days.")
 
 # --- relationships ----------------------------------------------------------
 st.subheader("Chemistry & rivalries")

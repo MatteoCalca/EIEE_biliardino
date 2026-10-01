@@ -1,4 +1,5 @@
 streamlit>=1.32
+altair>=4.0
 pandas>=2.0
 SQLAlchemy>=2.0,<2.1
 psycopg2-binary>=2.9

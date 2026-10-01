@@ -7,7 +7,7 @@ folder (auto-listed in the sidebar).
 
 import streamlit as st
 
-from foosball import config, db, service, stats
+from foosball import config, db, elo, service, stats
 
 service.page_config("Record a match")
 
@@ -41,22 +41,32 @@ def _sel(label, key, default_idx):
     return st.selectbox(label, labels, index=min(default_idx, len(labels) - 1), key=key)
 
 
-# --- match entry form -------------------------------------------------------
+# --- match entry ------------------------------------------------------------
+# Players sit outside the form so the win chances update as soon as they're
+# picked; only the score and the save button are inside it.
+st.subheader("🔵 Team A")
+a1, a2 = st.columns(2)
+with a1:
+    a_att = _sel("⚔️ Attacker (front)", "a_att", 0)
+with a2:
+    a_def = _sel("🛡️ Defender (back)", "a_def", 1)
+
+st.subheader("🔴 Team B")
+b1, b2 = st.columns(2)
+with b1:
+    b_att = _sel("⚔️ Attacker (front)", "b_att", 2)
+with b2:
+    b_def = _sel("🛡️ Defender (back)", "b_def", 3)
+
+picked = [a_att, a_def, b_att, b_def]
+if len(set(picked)) == 4:
+    p_a = elo.win_probability(bundle["states"], *(id_of[n] for n in picked))
+    st.progress(p_a, text=f"Win chance: 🔵 Team A **{p_a*100:.0f}%** – "
+                          f"**{(1-p_a)*100:.0f}%** Team B 🔴")
+else:
+    st.caption("Pick four different players to see the win chances.")
+
 with st.form("record_match"):
-    st.subheader("🔵 Team A")
-    a1, a2 = st.columns(2)
-    with a1:
-        a_att = _sel("⚔️ Attacker (front)", "a_att", 0)
-    with a2:
-        a_def = _sel("🛡️ Defender (back)", "a_def", 1)
-
-    st.subheader("🔴 Team B")
-    b1, b2 = st.columns(2)
-    with b1:
-        b_att = _sel("⚔️ Attacker (front)", "b_att", 2)
-    with b2:
-        b_def = _sel("🛡️ Defender (back)", "b_def", 3)
-
     st.subheader("🥅 Score")
     s1, s2 = st.columns(2)
     with s1:
